@@ -1,0 +1,8 @@
+gunicorn
+pyyaml
+flask
+python-json-logger
+watchdog
+requests
+fbtftp
+jinja2
