@@ -10,7 +10,7 @@ variables:
 build-job:
   stage: build
   script:
-    - docker build --build-arg BASE_IMAGE_TAG=$BASE_IMAGE_TAG --build-arg VERSION=$VERSION -t $CI_REGISTRY_IMAGE:$VERSION .
+    - docker build --build-arg BASE_IMAGE_TAG=$BASE_IMAGE_TAG --build-arg VERSION=$VERSION -t $CI_REGISTRY_IMAGE:$VERSION -t $CI_REGISTRY_IMAGE:latest .
 
 publish-job:
   stage: publish
