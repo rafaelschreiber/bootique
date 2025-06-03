@@ -1,4 +1,11 @@
-FROM hafen.parlament.gv.at/docker.io/library/python:3-alpine
+ARG BASE_IMAGE_TAG=3-alpine
+ARG VERSION
+
+FROM hafen.parlament.gv.at/docker.io/library/python:$BASE_IMAGE_TAG
+
+LABEL "org.opencontainers.image.authors"="rafael.schreiber@parlament.gv.at"
+LABEL "org.opencontainers.image.version"="$VERSION"
+
 
 ENV PYTHONUNBUFFERED=1
 
