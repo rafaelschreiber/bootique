@@ -105,7 +105,7 @@ Maschinen werden in YAML-Dateien deklariert und konfiguriert. Hier ein Beispiel:
         swap_size: 4096
       - name: store2.example.com
         ipv4: 10.0.1.2
-        kickstart_template: template/store2.ks.j2
+        kickstart_template: templates/store2.ks.j2
         selinux: True
 ```
 
@@ -114,12 +114,12 @@ Maschinen werden in YAML-Dateien deklariert und konfiguriert. Hier ein Beispiel:
 Bei `MachineGroup`-Deklarationen ist es wichtig zu wissen, dass die Maschinenspezifische Konfiguration die überliegende überschreibt. 
 
 Im oben gezeigten Beispiel verwendet die `store1.example.com` das global definierte Kickstart-Template unter `templates/default.ks.j2` und der Key `selinux` ist `False`.<br>
-Bei der Maschine `store2.example.com` ist `selinux` auf `True` gesetzt und `template/store2.ks.j2` wird stattdessen verwendet. 
+Bei der Maschine `store2.example.com` ist `selinux` auf `True` gesetzt und `templates/store2.ks.j2` wird stattdessen verwendet. 
 
 ### Templating
 Die stärke von Bootique liegt bei der templating Funktionalität. Diese ermöglicht es jede erdenkliche Art von Kickstart-Files zu erstellen. Bootique verwendet im Hintergrund [Jinja](https://jinja.palletsprojects.com) als Templating-Engine.
 
-Der Pfad zum Template unter `kickstart_template` wird relativ zum root-Verzeichnis der Konfiguration angegeben. Templates müssen daher nicht im `template/` Verzeichnis liegen sondern können auch im selben Verzeichnis wie die der Maschinen Konfigurationen liegen.
+Der Pfad zum Template unter `kickstart_template` wird relativ zum root-Verzeichnis der Konfiguration angegeben. Templates müssen daher nicht im `templates/` Verzeichnis liegen sondern können auch im selben Verzeichnis wie die der Maschinen Konfigurationen liegen.
 
 Diese Information ist momentan sowieso irrelevant, weil Bootique nur nach YAML-Dateien im root-Verzeichnis der Konfiguration sucht. Bei Bedarf kann diese Funktionalität in Zukunft ergänzt werden, damit YAML-Dateien in Ordnern organisiert werden können. Zusammengefasst sieht die Verzeichnisstruktur des Konfiguration so aus:
 
@@ -199,7 +199,7 @@ Unabhängig davon welche Konfigurationsmethode verwendet wird: Wenn eine neue Ko
 ## Starten
 Wenn der `bootique.service` angelgt und die Konfiguration erstellt wurde, dann kann Bootique wie gewohnt mittels `systemctl start bootique.service` gestartet werden. Wenn alles Funktioniert, dann sollte folgendes im Log stehen:
 
-```json
+```
 [2025-05-31 13:25:44 +0000] [4] [INFO] Starting gunicorn 23.0.0
 [2025-05-31 13:25:44 +0000] [4] [INFO] Listening at: http://0.0.0.0:443 (4)
 [2025-05-31 13:25:44 +0000] [4] [INFO] Using worker: sync
