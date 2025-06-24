@@ -287,9 +287,9 @@ class ConfigManagerThread(threading.Thread):
                                                                               architecture=os_arch)
         config_entry["os_repo_url"] = os_repo_url
         try:
-            check_repo_request = requests.get(f"{os_repo_url}/os/LICENSE")
+            check_repo_request = requests.get(f"{os_repo_url}/media.repo")
         except requests.exceptions.RequestException as e:
-            error_msg = f"Could not request from: '{os_repo_url}/os/LICENSE' due: '{e}'"
+            error_msg = f"Could not request from: '{os_repo_url}/media.repo' due: '{e}'"
             logging.error(error_msg)
             return False, {}
 

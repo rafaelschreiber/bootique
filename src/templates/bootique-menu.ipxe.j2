@@ -27,9 +27,9 @@ set sp:hex 20
 set sp ${sp:string}
 
 echo Booting kernel:
-echo ${BASEURL}/os/images/pxeboot/vmlinuz
+echo ${BASEURL}/images/pxeboot/vmlinuz
 echo with initrd:
-echo ${BASEURL}/os/images/pxeboot/initrd.img
+echo ${BASEURL}/images/pxeboot/initrd.img
 echo
 echo Depending on the content of the kickstart file,
 echo THIS MAY WIPE YOUR ENTIRE DISK INCLUDING THE OPERATING SYSTEM!
@@ -40,8 +40,8 @@ iseq ${confirm} YES && goto startboot || goto start
 
 
 :startboot
-kernel ${BASEURL}/os/images/pxeboot/vmlinuz inst.ks={{ origin }}/kickstart inst.repo=${BASEURL}/os
-initrd ${BASEURL}/os/images/pxeboot/initrd.img
+kernel ${BASEURL}/images/pxeboot/vmlinuz inst.ks={{ origin }}/kickstart inst.repo=${BASEURL}
+initrd ${BASEURL}/images/pxeboot/initrd.img
 boot
 
 :shell
