@@ -40,7 +40,7 @@ iseq ${confirm} YES && goto startboot || goto start
 
 
 :startboot
-kernel ${BASEURL}/os/images/pxeboot/vmlinuz inst.ks={{ origin }}/kickstart inst.repo=http://repo9.parlament.gv.at/9/BaseOS/x86_64/kickstart
+kernel ${BASEURL}/os/images/pxeboot/vmlinuz inst.ks={{ origin }}/kickstart inst.repo=${BASEURL}/os
 initrd ${BASEURL}/os/images/pxeboot/initrd.img
 boot
 

@@ -9,7 +9,8 @@ import ConfigManager
 
 # configured/supported RHEL distributions and their repos
 DISTRIBUTION_REPOS = {
-    "rocky": "http://repo{version}.parlament.gv.at/{version}/BaseOS/{architecture}"
+    "rocky": "http://repo{version}.parlament.gv.at/{version}/BaseOS/{architecture}",
+    "rhel": "http://repo{version}.parlament.gv.at/{version}/RHEL/{architecture}"
 }
 
 # configuration for the TFTP server
