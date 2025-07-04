@@ -16,10 +16,12 @@ def kickstart_before_request():
 
 @kickstart_blueprint.route("/", methods=['GET'])
 def get_kickstart_file():
-    if flask.request.args.get("ip") is None:
-        requester_ip = flask.request.remote_addr
-    else:
+    if flask.request.headers.get('X-Forwarded-For') is not None:
+        requester_ip = flask.request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    elif flask.request.args.get("ip") is not None:
         requester_ip = flask.request.args.get("ip")
+    else:
+        requester_ip = flask.request.remote_addr
 
     try:
         requester_ip = ipaddress.ip_address(requester_ip)
