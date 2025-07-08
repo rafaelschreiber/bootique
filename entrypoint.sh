@@ -4,7 +4,7 @@ mkdir -p /data/{config,log}
 
 # Start the main process and save its PID
 # Use exec to replace the shell script process with the main process
-exec gunicorn main:APP --bind 0.0.0.0:443 &
+exec gunicorn main:APP --bind 0.0.0.0:80 &
 
 pid=$!
 

@@ -19,7 +19,6 @@ RUN pip install --no-cache-dir -r /requirements.txt
 COPY entrypoint.sh /
 COPY src /app
 
-EXPOSE 69/udp
-EXPOSE 443/tcp
+EXPOSE 80/tcp
 
 ENTRYPOINT ["/sbin/tini", "--", "/entrypoint.sh"]
