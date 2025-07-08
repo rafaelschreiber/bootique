@@ -25,4 +25,4 @@ TFTP_CONFIGURATION = {
 # !!! Do not modify below this line !!!
 
 CONFIGMANAGER: ConfigManager.ConfigManagerThread
-TFTP_SERVER: tftp.TFTPServer
+# TFTP_SERVER: tftp.TFTPServer

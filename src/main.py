@@ -1,7 +1,7 @@
 import logging
 import os
 import pathlib
-import threading
+# import threading
 
 import flask
 import pythonjsonlogger
@@ -9,7 +9,7 @@ import pythonjsonlogger
 import globals
 import ConfigManager
 import routes
-import tftp
+# import tftp
 
 APP = flask.Flask(__name__)
 
@@ -42,14 +42,15 @@ def setup():
 
     APP.register_blueprint(routes.kickstart_blueprint, url_prefix="/kickstart")
     APP.register_blueprint(routes.admin_blueprint, url_prefix="/admin")
+    APP.register_blueprint(routes.bootmenu_blueprint, url_prefix="/bootmenu.ipxe")
 
-    globals.TFTP_SERVER = tftp.TFTPServer(globals.TFTP_CONFIGURATION["address"],
-                                          globals.TFTP_CONFIGURATION["port"],
-                                          globals.TFTP_CONFIGURATION["retries"],
-                                          globals.TFTP_CONFIGURATION["timeout"])
+    # globals.TFTP_SERVER = tftp.TFTPServer(globals.TFTP_CONFIGURATION["address"],
+    #                                       globals.TFTP_CONFIGURATION["port"],
+    #                                       globals.TFTP_CONFIGURATION["retries"],
+    #                                       globals.TFTP_CONFIGURATION["timeout"])
 
-    tftp_server_thread = threading.Thread(target=globals.TFTP_SERVER.run)
-    tftp_server_thread.start()
+    # tftp_server_thread = threading.Thread(target=globals.TFTP_SERVER.run)
+    # tftp_server_thread.start()
 
 
 # entrypoint
