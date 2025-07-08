@@ -9,7 +9,7 @@ import ConfigManager
 
 # configured/supported RHEL distributions and their repos
 DISTRIBUTION_REPOS = {
-    "rocky": "http://repo{version}.parlament.gv.at/{version}/BaseOS/{architecture}/os",
+    "rocky": "http://repo{version}.parlament.gv.at/{version}/BaseOS/{architecture}/kickstart",
     "rhel": "http://repo{version}.parlament.gv.at/RHEL/{version}/BaseOS"
 }
 
