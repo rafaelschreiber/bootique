@@ -42,7 +42,7 @@ def setup():
 
     APP.register_blueprint(routes.kickstart_blueprint, url_prefix="/kickstart")
     APP.register_blueprint(routes.admin_blueprint, url_prefix="/admin")
-    APP.register_blueprint(routes.bootmenu_blueprint, url_prefix="/bootmenu.ipxe")
+    APP.register_blueprint(routes.bootmenu_blueprint, url_prefix="/pxe")
 
     # globals.TFTP_SERVER = tftp.TFTPServer(globals.TFTP_CONFIGURATION["address"],
     #                                       globals.TFTP_CONFIGURATION["port"],

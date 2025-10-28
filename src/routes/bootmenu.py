@@ -55,7 +55,7 @@ def bootmenu_before_request():
                             remote_addr=flask.request.remote_addr)
                  )
 
-@bootmenu_blueprint.route("/", methods=['GET'])
+@bootmenu_blueprint.route("/bootmenu.ipxe", methods=['GET'])
 def get_bootmenu_file():
     if flask.request.args.get("ip") is not None:
         requester_ip = flask.request.args.get("ip")
