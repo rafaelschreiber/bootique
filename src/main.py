@@ -1,15 +1,14 @@
 import logging
 import os
 import pathlib
-# import threading
 
 import flask
 import pythonjsonlogger
+import werkzeug.middleware.proxy_fix
 
 import globals
 import ConfigManager
 import routes
-# import tftp
 
 APP = flask.Flask(__name__)
 
@@ -30,9 +29,6 @@ def setup_logging():
     # Optional: ensure Flask's own logger uses JSON too
     logging.getLogger('werkzeug').handlers = [handler]
 
-    # Optional: Disable info messages from fbtftp base_handler module
-    logging.getLogger("fbtftp").setLevel(logging.WARNING)
-
 
 def setup():
     setup_logging()
@@ -40,17 +36,15 @@ def setup():
                                                                                      "/data/config")))
     globals.CONFIGMANAGER.start()
 
+    # Recognise X-Forwarded-For Header as source IP when behind a proxy
+    if os.getenv("IS_BEHIND_PROXY", "false").lower() == "true":
+        APP.wsgi_app = werkzeug.middleware.proxy_fix.ProxyFix(
+            APP.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+        )
+
     APP.register_blueprint(routes.kickstart_blueprint, url_prefix="/kickstart")
     APP.register_blueprint(routes.admin_blueprint, url_prefix="/admin")
-    APP.register_blueprint(routes.bootmenu_blueprint, url_prefix="/pxe")
-
-    # globals.TFTP_SERVER = tftp.TFTPServer(globals.TFTP_CONFIGURATION["address"],
-    #                                       globals.TFTP_CONFIGURATION["port"],
-    #                                       globals.TFTP_CONFIGURATION["retries"],
-    #                                       globals.TFTP_CONFIGURATION["timeout"])
-
-    # tftp_server_thread = threading.Thread(target=globals.TFTP_SERVER.run)
-    # tftp_server_thread.start()
+    APP.register_blueprint(routes.pxe_blueprint, url_prefix="/pxe")
 
 
 # entrypoint

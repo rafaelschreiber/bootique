@@ -14,21 +14,17 @@ def kickstart_before_request():
                             remote_addr=flask.request.remote_addr)
                  )
 
-@kickstart_blueprint.route("/", methods=['GET'])
+
+@kickstart_blueprint.route("", methods=['GET'])
 def get_kickstart_file():
-    if flask.request.args.get("ip") is not None:
-        requester_ip = flask.request.args.get("ip")
-    elif flask.request.headers.get('X-Forwarded-For') is not None:
-        requester_ip = flask.request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    else:
-        requester_ip = flask.request.remote_addr
+    remote_addr = flask.request.args.get("ip", flask.request.remote_addr)
 
     try:
-        requester_ip = ipaddress.ip_address(requester_ip)
+        remote_addr = ipaddress.ip_address(remote_addr)
     except ValueError:
         return "Bad request", 400
 
-    machine = globals.CONFIGMANAGER.get_machine_by_ip(requester_ip)
+    machine = globals.CONFIGMANAGER.get_machine_by_ip(remote_addr)
     if not machine:
         return "Not Found", 404
 

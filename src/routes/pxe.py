@@ -9,7 +9,7 @@ import yaml
 
 import globals
 
-bootmenu_blueprint = flask.Blueprint('bootmenu', __name__)
+pxe_blueprint = flask.Blueprint('bootmenu', __name__)
 TEMPLATE_ENV = jinja2.Environment(loader=jinja2.FileSystemLoader("templates/"))
 
 def multiline_output_ipxe(text: str) -> str:
@@ -48,34 +48,35 @@ def render_kickstart_menu(machine: dict):
     return multiline_output_ipxe(kickstart)
 
 
-@bootmenu_blueprint.before_request
+@pxe_blueprint.before_request
 def bootmenu_before_request():
     logging.info(f"{flask.request.method} {flask.request.path} from {flask.request.remote_addr}",
                  extra=dict(method=flask.request.method, path=flask.request.path,
                             remote_addr=flask.request.remote_addr)
                  )
 
-@bootmenu_blueprint.route("/bootmenu.ipxe", methods=['GET'])
-def get_bootmenu_file():
-    if flask.request.args.get("ip") is not None:
-        requester_ip = flask.request.args.get("ip")
-    elif flask.request.headers.get('X-Forwarded-For') is not None:
-        requester_ip = flask.request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    else:
-        requester_ip = flask.request.remote_addr
 
-    machine = globals.CONFIGMANAGER.get_machine_by_ip(ipaddress.ip_address(requester_ip))
+@pxe_blueprint.route("/bootmenu.ipxe", methods=['GET'])
+def get_bootmenu():
+    remote_addr = flask.request.args.get("ip", flask.request.remote_addr)
+
+    try:
+        remote_addr = ipaddress.ip_address(remote_addr)
+    except ValueError:
+        return "Bad request", 400
+
+    machine = globals.CONFIGMANAGER.get_machine_by_ip(remote_addr)
     if machine:  # machine found
         machine = machine.copy()
         machine["echo_configuration"] = render_config_menu(machine)
         machine["echo_kickstart"] = render_kickstart_menu(machine)
-        machine["ip_address"] = requester_ip
+        machine["ip_address"] = str(remote_addr)
         machine["time_generated"] = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
-        machine["origin"] = os.getenv("SELF_SERVER_ORIGIN", "http://localhost:80")
+        machine["origin"] = os.getenv("BASE_URL", "http://localhost:80")
         data = TEMPLATE_ENV.get_template("bootique-menu.ipxe.j2").render(**machine)
     else:  # machine not found
         data = TEMPLATE_ENV.get_template("bootique-notfound.ipxe.j2").render(
-            ip_address=requester_ip,
+            ip_address=str(remote_addr),
             time_generated=datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S"),
         )
     return flask.Response(data, mimetype='text/plain'), 200

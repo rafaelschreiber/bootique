@@ -1,21 +1,57 @@
 ---
+# Author: Rafael Schreiber <rafael.schreiber@parlament.gv.at>
+# Date: 2025-08-29
+
 stages:
   - build
   - publish
 
 variables:
-  BASE_IMAGE_TAG: 3-alpine
-  VERSION: 1.1.4
+  BASE_IMAGE_TAG: alpine
 
-build-job:
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - when: never
+
+build-job-stable:
   stage: build
   script:
-    - docker build --build-arg BASE_IMAGE_TAG=$BASE_IMAGE_TAG --build-arg VERSION=$VERSION -t $CI_REGISTRY_IMAGE:$VERSION -t $CI_REGISTRY_IMAGE:latest .
+    - |
+      docker build \
+        --build-arg BASE_IMAGE_TAG=$BASE_IMAGE_TAG \
+        --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+        --build-arg VCS_REF=$CI_COMMIT_SHA \
+        --build-arg VERSION=$CI_COMMIT_TAG \
+        -t $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG \
+        -t $CI_REGISTRY_IMAGE:stable \
+        -t $CI_REGISTRY_IMAGE:latest \
+        .
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^([0-9]|[1-9][0-9]+)(\.([0-9]|[1-9][0-9]+)){2}$/
+    - when: never
+
+build-job-dev:
+  stage: build
+  script:
+    - |
+      docker build \
+        --build-arg BASE_IMAGE_TAG=$BASE_IMAGE_TAG \
+        --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+        --build-arg VCS_REF=$CI_COMMIT_SHA \
+        --build-arg VERSION=$(git tag --sort=-creatordate | head -n 1) \
+        -t $CI_REGISTRY_IMAGE:$(git tag --sort=-creatordate | head -n 1) \
+        -t $CI_REGISTRY_IMAGE:development \
+        .
+  rules:
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_TAG !~ /^([0-9]|[1-9][0-9]+)(\.([0-9]|[1-9][0-9]+)){2}$/
+    - if: $CI_COMMIT_TAG == null
+
 
 publish-job:
   stage: publish
   script:
-    - echo "$CI_JOB_TOKEN" | docker login --password-stdin -u $CI_REGISTRY_USER $CI_REGISTRY
-    - docker push $CI_REGISTRY_IMAGE:$VERSION
-    - docker push $CI_REGISTRY_IMAGE:latest
-...
+    - |
+      echo "$CI_JOB_TOKEN" | docker login --password-stdin -u $CI_REGISTRY_USER $CI_REGISTRY
+      docker push --all-tags $CI_REGISTRY_IMAGE

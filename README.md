@@ -1,7 +1,7 @@
 # Bootique
 *A boutique for booting machines over the network uniquely*
 
-Bootique implementiert einen TFTP- und einen HTTP-Server. Der TFTP-Server liefert unter `/ipxe.efi` (UEFI), bzw. `/undionly.kpxe` (BIOS) die Binaries für iPXE aus und außerdem ein auf die anfordernde Maschine angepasstes iPXE-Script unter dem Pfad `/bootique.ipxe` für das Bootmenü.
+~~Bootique implementiert einen TFTP- und einen HTTP-Server. Der TFTP-Server liefert unter `/ipxe.efi` (UEFI), bzw. `/undionly.kpxe` (BIOS) die Binaries für iPXE aus und außerdem ein auf die anfordernde Maschine angepasstes iPXE-Script unter dem Pfad `/bootique.ipxe` für das Bootmenü.~~
 
 Der HTTP-Server liefert eine für die anforderne Maschine eigenes Kickstart-Datei aus, damit die Installation automatisiert durchgeführt werden kann.
 
@@ -15,12 +15,7 @@ Das Booten übers Netzwerk erfordert einen DHCP-Server. Dieser muss zuerst insta
     {
         "name": "defaults",
         "test": "1 == 1",
-        "next-server": "<bootique-server-ip>"
-    },
-    {
-        "name": "ipxe",
-        "test": "option[77].hex == 'iPXE'",
-        "boot-file-name": "bootique.ipxe"
+        "next-server": "netboot.example.com"
     },
     {
         "name": "pxe-bios",
@@ -59,7 +54,7 @@ Pull=always
 # Volume=/opt/bootique:/data/config:ro # wenn die Konfiguration nicht über Git bezogen werden soll
 Network=host
 Environment=GIT_REPOSITORY=https://git.example.com/bootique-config.git
-Environment=SELF_SERVER_ORIGIN=http://netboot.example.com # origin teil der URL worüber der HTTP server aus Sicht der zu installiernden Maschinen erreichbar ist 
+Environment=BASE_URL=http://netboot.example.com # origin teil der URL worüber der HTTP server aus Sicht der zu installiernden Maschinen erreichbar ist 
 
 [Service]
 Restart=always
@@ -68,7 +63,7 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-ℹ️ Der Bootique container muss unter dem `root`-User laufen, sonst kann der Container nicht den `host`-Network-Namespace nutzen. TFTP funktioniert nicht über klassisches Port-forwarding bei Containern.
+~~ℹ️ Der Bootique container muss unter dem `root`-User laufen, sonst kann der Container nicht den `host`-Network-Namespace nutzen. TFTP funktioniert nicht über klassisches Port-forwarding bei Containern.~~
 
 Danach müssen die *Quadlet*-Files nur mehr von *systemd* mittels `systemctl daemon-reload` neu eingelesen werden. Mit `systemctl status bootique.service` kann nun der Service überprüft werden.
 
@@ -205,7 +200,6 @@ Wenn der `bootique.service` angelgt und die Konfiguration erstellt wurde, dann k
 [2025-05-31 13:25:44 +0000] [4] [INFO] Using worker: sync
 [2025-05-31 13:25:44 +0000] [5] [INFO] Booting worker with pid: 5
 {"time": "2025-05-31T13:25:44+0000", "level": "INFO", "message": "ConfigManagerThread started", "function": "run", "module": "ConfigManager"}
-{"time": "2025-05-31T13:25:44+0000", "level": "INFO", "message": "TFTP server started and listening on 0.0.0.0:69", "function": "__init__", "module": "server"}
 {"time": "2025-05-31T13:25:45+0000", "level": "INFO", "message": "New configuration from commit '7fbbcb616689e2067468b5c17bac585a831fafc0' with 3 machines successfully loaded", "function": "_run_git", "module": "ConfigManager"}
 ```
 

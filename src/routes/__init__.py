@@ -1,3 +1,3 @@
 from .kickstart import kickstart_blueprint
 from .admin import admin_blueprint
-from .bootmenu import bootmenu_blueprint
+from .pxe import pxe_blueprint

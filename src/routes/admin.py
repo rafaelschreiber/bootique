@@ -15,12 +15,6 @@ def admin_before_request():
                             remote_addr=flask.request.remote_addr)
                  )
 
-    admin_token = os.getenv('ADMIN_TOKEN')
-    if not admin_token:
-        return
-    if admin_token != flask.request.headers.get('Authorization').split("Bearer")[-1]:
-        return "Unauthorized", 401
-
 @admin_blueprint.route("/machines", methods=['GET'])
 def get_machines():
     if flask.request.args.get("ip") is None:

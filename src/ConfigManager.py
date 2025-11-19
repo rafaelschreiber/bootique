@@ -6,6 +6,7 @@ import pathlib
 import threading
 import ipaddress
 import subprocess
+import urllib.parse
 
 import yaml
 import jinja2
@@ -14,6 +15,10 @@ import watchdog.events
 import watchdog.observers
 
 import globals
+
+def redact_password_from_url(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    return str(parsed._replace(netloc="{}:{}@{}".format(parsed.username, "[REDACTED]", parsed.hostname)).geturl())
 
 class ConfigManagerException(Exception):
     pass
@@ -54,7 +59,8 @@ class ConfigManagerThread(threading.Thread):
 
         proc = subprocess.run(["git", "ls-remote", git_repo], capture_output=True)
         if proc.returncode != 0:
-            error_msg = f"Could not get latest commit from '{git_repo}'. Reason {proc.stderr}"
+            safe_git_repo_url = redact_password_from_url(git_repo)
+            error_msg = f"Could not get latest commit from '{safe_git_repo_url}'. Reason {proc.stderr}"
             logging.error(error_msg)
             return False, ""
 
