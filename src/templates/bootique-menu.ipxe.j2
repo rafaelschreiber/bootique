@@ -40,7 +40,7 @@ iseq ${confirm} YES && goto startboot || goto start
 
 
 :startboot
-kernel ${BASEURL}/images/pxeboot/vmlinuz inst.ks={{ origin }}/kickstart inst.repo=${BASEURL}
+kernel ${BASEURL}/images/pxeboot/vmlinuz initrd=initrd.img inst.ks={{ origin }}/kickstart inst.repo=${BASEURL}
 initrd ${BASEURL}/images/pxeboot/initrd.img
 boot
 
