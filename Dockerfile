@@ -1,7 +1,7 @@
 ARG BASE_IMAGE_TAG=3-alpine
 ARG VERSION
 
-FROM hafen.parlament.gv.at/docker.io/library/python:$BASE_IMAGE_TAG
+FROM hafen.parlament.gv.at/registry-1.docker.io/library/python:$BASE_IMAGE_TAG
 
 LABEL org.opencontainers.image.title="bootique" \
       org.opencontainers.image.authors="Rafael Schreiber <rafael.schreiber@parlament.gv.at>" \
