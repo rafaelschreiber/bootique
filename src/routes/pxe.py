@@ -6,6 +6,7 @@ import os
 import flask
 import jinja2
 import yaml
+import macaddress
 
 import globals
 
@@ -58,25 +59,41 @@ def bootmenu_before_request():
 
 @pxe_blueprint.route("/bootmenu.ipxe", methods=['GET'])
 def get_bootmenu():
-    remote_addr = flask.request.args.get("ip", flask.request.remote_addr)
+    remote_ip = flask.request.args.get("ip", flask.request.remote_addr)
+    remote_mac = flask.request.args.get("mac")
 
     try:
-        remote_addr = ipaddress.ip_address(remote_addr)
+        remote_ip = ipaddress.ip_address(remote_ip)
+        remote_mac = macaddress.MAC(remote_mac) if remote_mac else None
     except ValueError:
         return "Bad request", 400
 
-    machine = globals.CONFIGMANAGER.get_machine_by_ip(remote_addr)
-    if machine:  # machine found
+    machine_by_ip = globals.CONFIGMANAGER.get_machine_by_ip(remote_ip)
+    machine_by_mac = globals.CONFIGMANAGER.get_machine_by_mac(remote_mac) if remote_mac else None
+
+    # MAC is authoritative
+    if machine_by_mac:
+        machine = machine_by_mac
+        machine["remote_identifier"] = str(remote_mac)
+    else:
+        machine = machine_by_ip
+        machine["remote_identifier"] = str(remote_ip)
+
+    if machine.get("name"):
         machine = machine.copy()
         machine["echo_configuration"] = render_config_menu(machine)
         machine["echo_kickstart"] = render_kickstart_menu(machine)
-        machine["ip_address"] = str(remote_addr)
         machine["time_generated"] = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
         machine["origin"] = os.getenv("BASE_URL", "http://localhost:80")
+
         data = TEMPLATE_ENV.get_template("bootique-menu.ipxe.j2").render(**machine)
-    else:  # machine not found
-        data = TEMPLATE_ENV.get_template("bootique-notfound.ipxe.j2").render(
-            ip_address=str(remote_addr),
-            time_generated=datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S"),
+
+    else:
+        data = TEMPLATE_ENV.get_template(
+            "bootique-notfound.ipxe.j2"
+        ).render(
+            ip_address=str(remote_ip),
+            time_generated=datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
         )
-    return flask.Response(data, mimetype='text/plain'), 200
+
+    return flask.Response(data, mimetype="text/plain"), 200

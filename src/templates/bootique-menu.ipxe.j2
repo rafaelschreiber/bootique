@@ -5,7 +5,7 @@ set BASEURL             {{ os_repo_url }}
 
 ############################ MAIN MENU ################################
 :start
-menu iPXE Boot Menu for {{ name }} ({{ ip_address }})
+menu iPXE Boot Menu for {{ name }} ({{ remote_identifier }})
 item
 item --gap --       --------------------------- Operating Systems ----------------------------
 item --key 0 boot   [0] {{ os }} {{ os_version }}

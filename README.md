@@ -1,8 +1,6 @@
 # Bootique
 *A boutique for booting machines over the network uniquely*
 
-~~Bootique implementiert einen TFTP- und einen HTTP-Server. Der TFTP-Server liefert unter `/ipxe.efi` (UEFI), bzw. `/undionly.kpxe` (BIOS) die Binaries für iPXE aus und außerdem ein auf die anfordernde Maschine angepasstes iPXE-Script unter dem Pfad `/bootique.ipxe` für das Bootmenü.~~
-
 Der HTTP-Server liefert eine für die anforderne Maschine eigenes Kickstart-Datei aus, damit die Installation automatisiert durchgeführt werden kann.
 
 Bootique unterscheidet die anfordernden Maschinen anhand der Source-IP mit der die Rechner daherkommen.

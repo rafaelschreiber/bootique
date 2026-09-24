@@ -5,3 +5,4 @@ python-json-logger
 watchdog
 requests
 jinja2
+macaddress

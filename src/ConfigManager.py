@@ -11,6 +11,7 @@ import urllib.parse
 import yaml
 import jinja2
 import requests
+import macaddress
 import watchdog.events
 import watchdog.observers
 
@@ -95,6 +96,14 @@ class ConfigManagerThread(threading.Thread):
             if machine.get(f"ipv{ip_address.version}") is None:
                 continue
             if machine.get(f"ipv{ip_address.version}") == str(ip_address):
+                found_machine = machine
+                break
+        return found_machine
+
+    def get_machine_by_mac(self, mac_address: macaddress.EUI48) -> dict:
+        found_machine = {}
+        for machine in self.machines.values():
+            if machine.get("mac", "") == str(mac_address):
                 found_machine = machine
                 break
         return found_machine
@@ -251,6 +260,15 @@ class ConfigManagerThread(threading.Thread):
                 logging.error(error_msg)
                 return False, {}
 
+        # check for MAC address
+        if "mac" in config_entry.keys():
+            try:
+                config_entry["mac"] = str(macaddress.EUI48(config_entry["mac"]))
+            except ValueError:
+                error_message = f"Configuration '{config_entry}' got an invalid EUI48 (MAC)-Address"
+                logging.error(error_message)
+                return False, {}
+
         # check if kickstart_template is readable
         if "kickstart_template" not in config_entry.keys():
             error_msg = f"Missing key 'kickstart_template' in '{config_entry}'"
@@ -288,22 +306,9 @@ class ConfigManagerThread(threading.Thread):
             logging.error(error_msg)
             return False, {}
 
-        # check if repo is available
-        os_repo_url = globals.DISTRIBUTION_REPOS[config_entry["os"].lower()].format(version=os_version,
-                                                                              architecture=os_arch)
-        config_entry["os_repo_url"] = os_repo_url
-        try:
-            check_repo_request = requests.get(f"{os_repo_url}/media.repo")
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Could not request from: '{os_repo_url}/media.repo' due: '{e}'"
-            logging.error(error_msg)
-            return False, {}
-
-        if check_repo_request.status_code != requests.codes.ok:
-            error_msg = f"Release '{os_version}/{os_arch}' is not available inside repo '{os_repo_url}'"
-            logging.error(error_msg)
-            return False, {}
-
+        # Construct os_repo_url
+        config_entry["os_repo_url"] = globals.DISTRIBUTION_REPOS[config_entry["os"].lower()].format(version=os_version,
+                                                                                                    architecture=os_arch)
         return True, config_entry
 
     def _create_machines_from_configuration(self, raw_configuration: list[dict]) -> tuple[bool, dict]:
@@ -375,20 +380,43 @@ class ConfigManagerThread(threading.Thread):
             logging.error("Duplicate IPs detected")
             return False, {}
 
+        if not self._are_macs_unique(machines):
+            logging.error("Duplicate MACs detected")
+            return False, {}
+
         return True, machines
 
     @staticmethod
     def _are_ips_unique(machines: dict[str, dict], version: int) -> bool:
-        ips = []
+        ips = set()
         for machine in machines.values():
-            machine_ip = machine.get(f"ipv{version}")
-            if machine_ip is None:
+            ip = machine.get(f"ipv{version}")
+            if ip is None:
                 continue
-            if machine_ip in ips:  # duplicate found
-                error_msg = f"Duplicate IPv{version} address '{machine_ip}' in machine '{machine['name']}'"
-                logging.error(error_msg)
+
+            if ip in ips:
+                logging.error(
+                    f"Duplicate IPv{version} address '{ip}' in machine '{machine['name']}'"
+                )
                 return False
-            ips.append(machine_ip)
+            ips.add(ip)
+
+        return True
+
+    @staticmethod
+    def _are_macs_unique(machines: dict[str, dict]) -> bool:
+        macs = set()
+        for machine in machines.values():
+            mac = machine.get("mac")
+            if mac is None:
+                continue
+
+            if mac in macs:
+                logging.error(
+                    f"Duplicate MAC address '{mac}' in machine '{machine['name']}'"
+                )
+                return False
+            macs.add(mac)
         return True
 
     def generate_kickstart(self, machine: dict) -> tuple[bool, str]:
