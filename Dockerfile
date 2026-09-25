@@ -1,13 +1,13 @@
 ARG BASE_IMAGE_TAG=3-alpine
 ARG VERSION
 
-FROM hafen.parlament.gv.at/registry-1.docker.io/library/python:$BASE_IMAGE_TAG
+FROM registry-1.docker.io/library/python:$BASE_IMAGE_TAG
 
 LABEL org.opencontainers.image.title="bootique" \
-      org.opencontainers.image.authors="Rafael Schreiber <rafael.schreiber@parlament.gv.at>" \
+      org.opencontainers.image.authors="Rafael Schreiber <rafael@backend.works>" \
       org.opencontainers.image.description="Declare machines running RHEL-based distributions and kickstart them" \
-      org.opencontainers.image.url="https://gitlab.parlament.gv.at/container/bootique" \
-      org.opencontainers.image.source="https://gitlab.parlament.gv.at/container/bootique" \
+      org.opencontainers.image.url="https://github.com/rafaelschreiber/bootique" \
+      org.opencontainers.image.source="https://github.com/rafaelschreiber/bootique" \
       org.opencontainers.image.version=$VERSION \
       org.opencontainers.image.created=$BUILD_DATE \
       org.opencontainers.image.revision=$VCS_REF
