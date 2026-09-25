@@ -1,12 +1,15 @@
 # Bootique
 *A boutique for booting machines over the network uniquely*
 
-Der HTTP-Server liefert eine für die anforderne Maschine eigenes Kickstart-Datei aus, damit die Installation automatisiert durchgeführt werden kann.
+The HTTP server provides a custom iPXE boot menu and Kickstart file for each requesting machine, allowing the installation to be performed automatically.
 
-Bootique unterscheidet die anfordernden Maschinen anhand der Source-IP mit der die Rechner daherkommen.
+Bootique identifies requesting machines based on the source IP address from which the request originates. Alternatively, if the host's IP address is behind NAT, the MAC address can be used.
 
-## Voraussetzungen
-Das Booten übers Netzwerk erfordert einen DHCP-Server. Dieser muss zuerst installiert sein und die richtige IP-Adresse für den anfordernden Host vergeben. Außerdem müssen die `client-classes` richtig konfiguriert sein. Hier ein Beispiel für den Kea DHCP-Server:
+## Requirements
+
+Booting over the network requires a DHCP server and a TFTP server. These must be installed first, and the correct IP address must be assigned to the requesting host. In addition, the `client-classes` must be configured correctly.
+
+Here is an example for the Kea DHCP server:
 
 ```json
 "client-classes": [
@@ -29,17 +32,18 @@ Das Booten übers Netzwerk erfordert einen DHCP-Server. Dieser muss zuerst insta
 ```
 
 ## Installation
-Bootique läuft als Container und kann mittels *Quadlet* direkt über *systemd* gemanaged werden. Dazu muss nur `podman` auf der Maschine installiert und folgende *Quadlet*-Dateien unter `/etc/containers/systemd/` erstellt werden:
 
-```
+Bootique runs as a container and can be managed directly through *systemd* using **Quadlet**. Only `podman` needs to be installed on the machine, and the following **Quadlet** files must be created under `/etc/containers/systemd/`:
+
+```ini
 # /etc/containers/systemd/bootique.image
 
 [Image]
-Creds=<Container Registry Credentials> # kann weggelassen werden, wenn keine Authentifizierung notwendig ist
+Creds=<Container Registry Credentials> # Can be omitted if authentication is not required
 Image=registry.example.com/bootique:latest
 ```
 
-```
+```ini
 # /etc/containers/systemd/bootique.container
 
 [Unit]
@@ -49,10 +53,18 @@ After=local-fs.target
 [Container]
 Image=registry.example.com/bootique:latest
 Pull=always
-# Volume=/opt/bootique:/data/config:ro # wenn die Konfiguration nicht über Git bezogen werden soll
+# Volume=/opt/bootique:/data/config:ro  # If the configuration should not be obtained via Git
 Network=host
-Environment=GIT_REPOSITORY=https://git.example.com/bootique-config.git
-Environment=BASE_URL=http://netboot.example.com # origin teil der URL worüber der HTTP server aus Sicht der zu installiernden Maschinen erreichbar ist 
+Environment=GIT_REPOSITORY=https://git.example.com/bootique-config.git  # If not specified, the local configuration is used
+Environment=BASE_URL=http://netboot.example.com  # Origin part of the URL through which the HTTP server is reachable from the machines being installed
+Environment=IS_BEHIND_PROXY=true # Uses the X-Forwarded-For header to determine the source IP
+# Sets the repository URL. Every environment variable starting with 'REPO_' creates an OS entry.
+# In this case, when 'os: rocky' is specified in the machine configuration, the following repository is used.
+# The parameters 'version' and 'architecture' are substituted with 'os_version' and 'os_arch' respectively.
+Environment=REPO_ROCKY=https://download.rockylinux.org/pub/rocky/{version}/BaseOS/{architecture}/os/
+# Here for CentOS
+Environment=REPO_CENTOS=https://vault.centos.org/{version}/BaseOS/{architecture}/os/
+```
 
 [Service]
 Restart=always
@@ -61,12 +73,13 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-~~ℹ️ Der Bootique container muss unter dem `root`-User laufen, sonst kann der Container nicht den `host`-Network-Namespace nutzen. TFTP funktioniert nicht über klassisches Port-forwarding bei Containern.~~
+Afterwards, *systemd* only needs to reload the **Quadlet** files using `systemctl daemon-reload`. The service can then be checked with `systemctl status bootique.service`.
 
-Danach müssen die *Quadlet*-Files nur mehr von *systemd* mittels `systemctl daemon-reload` neu eingelesen werden. Mit `systemctl status bootique.service` kann nun der Service überprüft werden.
+## Configuration
 
-## Konfiguration
-Maschinen werden in YAML-Dateien deklariert und konfiguriert. Hier ein Beispiel:
+Machines are declared and configured in YAML files. Their structure is similar to Kubernetes manifests.
+
+Here is an example:
 
 ```yaml
 # machines.yaml
@@ -75,15 +88,15 @@ Maschinen werden in YAML-Dateien deklariert und konfiguriert. Hier ein Beispiel:
   name: core.example.com
   spec:
     kickstart_template: templates/default.ks.j2
-    os: rocky
-    os_version: 9
+    os: centos
+    os_version: 8
     os_arch: x86_64
     ipv4: 10.0.0.1
     ipv4_gw: 10.0.0.254
     ipv4_mask: 255.255.255.0
 
 - kind: MachineGroup
-  name: store-machines # Wird in der Konfiguration nicht verwendet, muss aber trotzdem angegeben werden
+  name: store-machines # Not used in the configuration, but must still be specified
   spec:
     kickstart_template: templates/default.ks.j2
     os: rocky
@@ -102,41 +115,50 @@ Maschinen werden in YAML-Dateien deklariert und konfiguriert. Hier ein Beispiel:
         selinux: True
 ```
 
-ℹ️ Die Felder `name`, `ipv4` || `ipv6`, `kickstart_template`, `os`, `os_version` und `os_arch` sind erforderlich.
+ℹ️ The fields `name`, `ipv4` or `ipv6`, `kickstart_template`, `os`, `os_version`, and `os_arch` are required.
 
-Bei `MachineGroup`-Deklarationen ist es wichtig zu wissen, dass die Maschinenspezifische Konfiguration die überliegende überschreibt. 
+For `MachineGroup` declarations, it is important to know that machine-specific configuration overrides the configuration defined at the group level.
 
-Im oben gezeigten Beispiel verwendet die `store1.example.com` das global definierte Kickstart-Template unter `templates/default.ks.j2` und der Key `selinux` ist `False`.<br>
-Bei der Maschine `store2.example.com` ist `selinux` auf `True` gesetzt und `templates/store2.ks.j2` wird stattdessen verwendet. 
+In the example above, `store1.example.com` uses the globally defined Kickstart template at `templates/default.ks.j2`, and the `selinux` key is set to `False`.
+
+For `store2.example.com`, `selinux` is set to `True`, and `templates/store2.ks.j2` is used instead.
 
 ### Templating
-Die stärke von Bootique liegt bei der templating Funktionalität. Diese ermöglicht es jede erdenkliche Art von Kickstart-Files zu erstellen. Bootique verwendet im Hintergrund [Jinja](https://jinja.palletsprojects.com) als Templating-Engine.
 
-Der Pfad zum Template unter `kickstart_template` wird relativ zum root-Verzeichnis der Konfiguration angegeben. Templates müssen daher nicht im `templates/` Verzeichnis liegen sondern können auch im selben Verzeichnis wie die der Maschinen Konfigurationen liegen.
+The strength of Bootique lies in its templating functionality. It makes it possible to create virtually any kind of Kickstart file. Bootique uses Jinja as its templating engine.
 
-Diese Information ist momentan sowieso irrelevant, weil Bootique nur nach YAML-Dateien im root-Verzeichnis der Konfiguration sucht. Bei Bedarf kann diese Funktionalität in Zukunft ergänzt werden, damit YAML-Dateien in Ordnern organisiert werden können. Zusammengefasst sieht die Verzeichnisstruktur des Konfiguration so aus:
+The path specified in `kickstart_template` is relative to the root directory of the configuration. Templates therefore do not have to reside in the `templates/` directory; they can also be located in the same directory as the machine configuration files.
 
-```
+Bootique only searches for YAML files in the root directory of the configuration. If necessary, this functionality can be extended in the future to allow YAML files to be organized in subdirectories.
+
+In summary, the configuration directory structure looks like this:
+
+```text
 .
 ├── machines.yaml
 ├── other_machines
-│   └── test.yaml # <- Wird nicht berücksichtigt
+│   └── test.yaml # <- Will not be considered
 └── templates
     ├── default.ks.j2
     └── store2.ks.j2
 ```
 
-#### Vordefinierte Variablen im Template
-Die Keys in der Konfiguration können im Template je nach belieben verwendet werden. Damit sind bei der Gestaltung der Konfiguration und der Templates nahezu keine Grenzen gesetzt. Folgende Variablen stehen im Template standardmäßig zu Verfügung und sollten nicht in der Konfiguration gesetzt werden:
-- `hostname`: Beinhaltet den selben Wert wie `name` in der Konfiguration
-- `os_repo_url`: Volle URL zum Repository. Setzt sich aus den Parametern `os`, `os_version` und `os_arch` in der Konfiguration zusammen.
+#### Predefined Template Variables
 
-#### Template Gestaltung
-Grundsätzlich sollte aus dem gerenderten Template eine Valide Kickstart-Datei herauskommen. Bootique checkt jedoch nicht, ob diese Kickstart Datei syntaktisch korrekt ist. Die Syntax kann mit dem Befehl `ksvalidate` überprüft werden. Die Semantik im ganzen kann jedoch nicht überprüft werden.
+The keys defined in the configuration can be used freely within templates. This means there are virtually no limits when designing configurations and templates.
 
-Im Endeffekt entscheidet man selbst, ob man für jede Maschine ein eigenes Template anlegt oder mit Jinja versucht es so generisch wie möglich zu halten. Es sollte ein guter Kompromiss gefunden werden, sodass die Wartbarkeit nicht darunter leidet.
+The following variables are available in templates by default and should not be set in the configuration:
 
-Hier ist ein Beispiel für das Template `default.ks.j2`:
+- `hostname`: Contains the same value as `name` in the configuration.
+- `os_repo_url`: The full URL to the OS repository. It is constructed from the `os`, `os_version`, and `os_arch` parameters in the configuration.
+
+#### Template Design
+
+The rendered template should ultimately produce a valid Kickstart file. However, Bootique does not check whether the generated Kickstart file is syntactically correct. Its syntax can be validated using the `ksvalidate` command. The overall semantics, however, cannot be validated automatically.
+
+Ultimately, you can decide whether to create a separate template for every machine or use Jinja to make the templates as generic as possible. A good compromise should be found so that maintainability does not suffer.
+
+Here is an example of the `default.ks.j2` template:
 
 ```jinja
 # templates/default.ks.j2
@@ -146,15 +168,16 @@ keyboard --xlayouts='de (nodeadkeys)'
 timezone Europe/Vienna --utc
 
 # Network configuration
-network  --bootproto=static --device=ens192 --gateway={{ ipv4_gw }} --ip={{ ipv4 }} --nameserver={{ ipv4_gw }} --netmask={{ ipv4_mask }} --ipv6=auto --activate --ipv4-dns-search=example.com --hostname={{ hostname }}
+network --bootproto=static --device=ens192 --gateway={{ ipv4_gw }} --ip={{ ipv4 }} --nameserver={{ ipv4_gw }} --netmask={{ ipv4_mask }} --ipv6=auto --activate --ipv4-dns-search=example.com --hostname={{ hostname }}
 
-# Installaltion source
+# Installation source
 url --url={{ os_repo_url }}/os/
 
 reboot
 text
 
 clearpart --all --initlabel
+
 # System Partitions, VolumeGroups and Logical Volumes
 part /boot --fstype="xfs" --ondisk=/dev/sda --size=2048
 part /boot/efi --fstype="efi" --ondisk=/dev/sda --size=100 --fsoptions="umask=0077,shortname=winnt"
@@ -181,18 +204,29 @@ grubby
 %end
 ```
 
-### Konfigurations Updates
-Bootique parsed neue Konfiguration während der laufzeit. Ein Restart ist daher nicht erforderlich. Wird Bootique ohne gültigem Git-Repository als Umgebungsvariable `GIT_REPOSITORY` gestartet, dann wird die lokale Konfiguration unter `/data/config/` verwendet. Der Pfad kann mit der Umgebungsvariable `CONFIG_DIRECTORY` geändert werden.
+### Configuration Updates
 
-Bei der lokalen Konfiguration setzt Bootique einen File-Event-Handler auf das Verzeichnis und lädt die Konfiguration nach jeder Änderung neu.<br>
-Wenn Bootique die Konfiguration über ein Git-Repository bezieht, dann überprüft es alle 10 Sekunden, ob es einen neuen Commit am Repository gibt. Wenn das der Fall ist, cloned er sich das neue Repository und versucht die neue Konfiguration zu parsen.
+Bootique parses new configuration while running, so a restart is not required.
 
-Unabhängig davon welche Konfigurationsmethode verwendet wird: Wenn eine neue Konfiguration nicht eingelesen werden kann, wird die Alte weiter verwendet. Erst bei einer gültigen Konfiguration wird die Alte ersetzt.
+If Bootique is started without a valid Git repository specified through the `GIT_REPOSITORY` environment variable, the local configuration under `/data/config/` is used. This path can be changed using the `CONFIG_DIRECTORY` environment variable.
 
-## Starten
-Wenn der `bootique.service` angelgt und die Konfiguration erstellt wurde, dann kann Bootique wie gewohnt mittels `systemctl start bootique.service` gestartet werden. Wenn alles Funktioniert, dann sollte folgendes im Log stehen:
+When using local configuration, Bootique sets up a file event handler on the directory and reloads the configuration whenever a change is detected.
 
+When Bootique obtains its configuration from a Git repository, it checks every 10 seconds whether a new commit is available in the repository. If a new commit is detected, Bootique clones the updated repository and attempts to parse the new configuration.
+
+Regardless of which configuration method is used, if a new configuration cannot be loaded successfully, the previous configuration remains active. It is only replaced once a valid new configuration has been loaded.
+
+## Starting Bootique
+
+Once `bootique.service` has been created and the configuration is in place, Bootique can be started as usual with:
+
+```bash
+systemctl start bootique.service
 ```
+
+If everything is working correctly, the log should contain output similar to the following:
+
+```text
 [2025-05-31 13:25:44 +0000] [4] [INFO] Starting gunicorn 23.0.0
 [2025-05-31 13:25:44 +0000] [4] [INFO] Listening at: http://0.0.0.0:443 (4)
 [2025-05-31 13:25:44 +0000] [4] [INFO] Using worker: sync
@@ -202,9 +236,11 @@ Wenn der `bootique.service` angelgt und die Konfiguration erstellt wurde, dann k
 ```
 
 ## Troubleshooting
-Es gibt einige HTTP-Endpoints um die Konfiguration von Bootique auszulesen:
-- `/admin/machines`: Liefert alle in Bootique konfigurierte Maschinen
-- `/admin/machines/<machine_name>`: Liefert die Konfiguration für die im Pfad angegebene `machine_name`
-- `/kickstart`: Gibt das gerenderte Kickstart-File zurück. Ohne Query-Parameter liefert es das Kickstart-File aus für die Source-IP des Requests. Um das Kickstart-File für eine spezifische Maschine zu bekommen muss `?ip=<requested_ip>` in der Anfrage angegeben werden.
+
+Bootique provides several HTTP endpoints that can be used to inspect its configuration:
+
+- `/admin/machines`: Returns all machines configured in Bootique.
+- `/admin/machines/<machine_name>`: Returns the configuration for the `machine_name` specified in the path.
+- `/kickstart`: Returns the rendered Kickstart file. Without query parameters, it returns the Kickstart file associated with the source IP address of the request. To retrieve the Kickstart file for a specific machine, specify `?ip=<requested_ip>` in the request. Alternatively, `?mac=<requested_mac>` can be used if the declared machine has a MAC address assigned. This is particularly useful when the requesting machine is located behind NAT.
 
 ✨ Happy Installing ✨
