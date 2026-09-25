@@ -64,7 +64,6 @@ Environment=IS_BEHIND_PROXY=true # Uses the X-Forwarded-For header to determine 
 Environment=REPO_ROCKY=https://download.rockylinux.org/pub/rocky/{version}/BaseOS/{architecture}/os/
 # Here for CentOS
 Environment=REPO_CENTOS=https://vault.centos.org/{version}/BaseOS/{architecture}/os/
-```
 
 [Service]
 Restart=always
